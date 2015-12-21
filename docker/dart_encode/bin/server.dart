@@ -104,6 +104,8 @@ runCheck(Config config) async {
       print('skipping: destination file already exists for ${config.outputFile}');
       if (iterator.moveNext()) {
         return await chainSyncRunCommand();
+      } else {
+        out.write('');
       }
     } else {
       out.write('${config.pathtoFfmpeg} ${config.getArgs().join(" ")}');
