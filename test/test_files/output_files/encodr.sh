@@ -1,0 +1,1 @@
+ffmpeg -n -i /encodeIn/test.mkv -vcodec copy -acodec copy /encodeOut/test.mp4
