@@ -27,7 +27,3 @@ do
 	(eval $FFMPEG_COMMANDS)
 	sleep 30
 done
-
-# Left to do:
-# Fix build process by adding 'docker rm encodr ffmpeg'
-# Make sure ffmpeg is reading from proper script and generating proper output

@@ -8,39 +8,44 @@ import 'dart:io';
 import 'dart:async';
 
 class Config {
-  String pathtoFfmpeg;
-  List<String> ffmpegArgs;
-  String folderToCheck;
-  String finishFolder;
+  String get inPath => _inPath;
+  String _inPath;
+  String get outPath => _outPath;
+  String _outPath;
 
-  Config(this.pathtoFfmpeg, this.ffmpegArgs, this.folderToCheck, this.finishFolder);
+  Duration get repeatDelay => _repeatDelay;
+  Duration _repeatDelay;
 
-  String inputFile;
-  String outputFile;
-
-  setInputFile(String inputFile) => this.inputFile = inputFile;
-  setOutputFile(String outputFile) => this.outputFile = outputFile;
-
-  getArgs() {
-    return [
-      '-n',
-      '-i',
-      '\'${inputFile}\'',
-      '-vcodec',
-      'copy',
-      '-acodec',
-      'copy',
-      '\'${outputFile}\''
-    ];
-  }
+  Config(String inPath, String outPath, Duration repeatDelay) : _inPath=inPath, _outPath=outPath, _repeatDelay=repeatDelay;
 }
 
-Config config = new Config(
-    'ffmpeg',
-    ['-vcodec copy -acodec copy'],
-    '/encodeIn',
-    '/encodeOut'
-);
+void main() {
+  Config config = new Config(
+      '/encodeIn',
+      '/encodeOut',
+      new Duration(seconds: 30)
+  );
+
+  new Runner(() async {
+    print('running');
+    Source src = new FilteredSource(
+        new Directory(config.inPath),
+        (FileSystemEntity entity) {
+      String filePath = getFileNameWithPath(config.outPath, entity, '.mp4');
+      bool dstExists = new File(filePath).existsSync();
+      bool isFile = entity.statSync().type == FileSystemEntityType.FILE && entity.path.endsWith('.mkv');
+
+      return isFile && !dstExists;
+    });
+    Output output = new Output(src.files, config.outPath, (FileSystemEntity entity) {
+      return "${entity.path}:${getFileNameWithPath(config.outPath, entity, '.mp4')}";
+    });
+
+    await output.process();
+
+  }, delay: new Duration(seconds:15));
+}
+
 
 class Runner {
   Function get runFn => _runFn;
@@ -57,10 +62,13 @@ class Runner {
   }
 
   _run() async {
+    Stopwatch watch = new Stopwatch();
+    watch.start();
     _status = RunnerStatus.Running;
     print('running');
     await _runFn();
-    print('done, waiting...');
+    watch.stop();
+    print('done in ${watch.elapsed}');
     _status = RunnerStatus.Delayed;
     new Future.delayed(delay).whenComplete(_run);
   }
@@ -91,43 +99,18 @@ class FilteredSource extends Source {
 
 class Output {
   Stream<String> get out => _in.map(_processFn);
-  Function _processFn;
-
   Stream<FileSystemEntity> _in;
+  Function _processFn;
+  String _outPath;
 
-  Output(this._in, String this._processFn(FileSystemEntity) );
+  Output(this._in, this._outPath, this._processFn(FileSystemEntity));
 
   Future process() async {
     List<String> allOutput = await out.toList();
     print('got all output: ${allOutput.length} items: ${allOutput}');
-    new File('${config.finishFolder}/.encodr')..createSync()..writeAsStringSync(allOutput.join("\n"), flush: true);
+    new File('${_outPath}/.encodr')..createSync()..writeAsStringSync(allOutput.join("\n"), flush: true);
   }
 }
-
-void main() {
-  new Runner(() async {
-    print('running');
-    Source src = new FilteredSource(
-        new Directory(config.folderToCheck),
-        (FileSystemEntity entity) {
-          //print('checking file ${entity.path}');
-          String filePath = getFileNameWithPath(config.finishFolder, entity, '.mp4');
-          bool dstExists = new File(filePath).existsSync();
-          //print('filePath: ${filePath}, exists: ${dstExists}');
-          return entity.statSync().type == FileSystemEntityType.FILE && entity.path.endsWith('.mkv') && !dstExists;
-    }
-    );
-    print('creating output...');
-    Output output = new Output(src.files, (FileSystemEntity entity) {
-      return "${entity.path}:${getFileNameWithPath(config.finishFolder, entity, '.mp4')}";
-    });
-
-    print('running output.process()');
-    await output.process();
-
-  }, delay: new Duration(seconds:15));
-}
-
 getFileNameWithPath(String basePath, File fileWithName, String extension) {
   return basePath.replaceAll(new RegExp(r'/^\/+$'), '') + fileWithName.path.replaceAll(fileWithName.parent.path, '').replaceAll('.mkv', extension);
 }

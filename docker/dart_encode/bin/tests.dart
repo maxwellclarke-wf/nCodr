@@ -16,7 +16,7 @@ main() async {
   describe('nCoder', () {
     group('filesystem', () {
       it('returns all files in a directory', () {
-        getFiles(testConfig.folderToCheck).listen((FileSystemEntity entity) {
+        getFiles(testConfig.inPath).listen((FileSystemEntity entity) {
           print(entity.toString());
         });
       });
