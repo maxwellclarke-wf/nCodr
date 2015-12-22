@@ -7,24 +7,6 @@
 import 'dart:io';
 import 'dart:async';
 
-void runTest() {
-  runCheck(new Config(
-      'ffmpeg',
-      ['-vcodec copy -acodec copy'],
-  "/Users/maxwellclarke/workspaces/platform/nCoder/test/test_files/input_files",
-  "/Users/maxwellclarke/workspaces/platform/nCoder/test/test_files/output_files"
-  ));
-}
-
-void runProd() {
-  runCheck(new Config(
-      'ffmpeg',
-      ['-vcodec copy -acodec copy'],
-  '/encodeIn',
-  '/encodeOut'
-  ));
-}
-
 class Config {
   String pathtoFfmpeg;
   List<String> ffmpegArgs;
@@ -53,93 +35,97 @@ class Config {
   }
 }
 
-main() async {
+Config config = new Config(
+    'ffmpeg',
+    ['-vcodec copy -acodec copy'],
+    '/encodeIn',
+    '/encodeOut'
+);
 
-  print('starting up like a mofo');
-  // get params
-  runProd();
-}
+class Runner {
+  Function get runFn => _runFn;
+  Function _runFn;
+  Duration get delay => _delay;
+  Duration _delay;
+  RunnerStatus get status => _status;
+  RunnerStatus _status;
 
-
-
-runCheck(Config config) async {
-
-  writeFile(StringBuffer out) {
-    File outputFile = new File('${config.finishFolder}/encodr.sh');
-    String  outputString = out.toString();
-    int firstBreak = outputString.indexOf('\n');
-    if (firstBreak == -1) {
-      firstBreak = outputString.length;
-    }
-    outputFile.writeAsString(outputString.substring(0, firstBreak));
-
-    print('writing file...');
-    print(outputString.substring(0, firstBreak));
+  Runner(this._runFn, {delay: Duration.ZERO, status: RunnerStatus.Initializing}) {
+    _delay = delay;
+    _status = status;
+    _run();
   }
 
-  print('running check');
-  List<File> files = await getMkvFiles(getFiles(config.folderToCheck)).toList();
-
-  if (files.isEmpty) {
-    print("No files found, sleeping...");
-    writeFile(new StringBuffer());
-    new Future.delayed(new Duration(seconds: 30)).then((_) => runCheck(config));
-    return;
+  _run() async {
+    _status = RunnerStatus.Running;
+    print('running');
+    await _runFn();
+    print('done, waiting...');
+    _status = RunnerStatus.Delayed;
+    new Future.delayed(delay).whenComplete(_run);
   }
-  Iterator<File> iterator = files.iterator;
-  iterator.moveNext();
-  StringBuffer out;
-  Future chainSyncRunCommand() async {
-    out = new StringBuffer();
-    File file = iterator.current;
-    config.setInputFile(file.path);
-    config.setOutputFile(getFileNameWithPath(
-        config.finishFolder, file, '.mp4'));
+}
 
-    // Chain waits on process queue
-    print('processing file...');
-    // process this file
-    print('checking if file ${config.outputFile} exists...');
-    if (new File(config.outputFile).existsSync()) {
-      print('skipping: destination file already exists for ${config.outputFile}');
-      if (iterator.moveNext()) {
-        return await chainSyncRunCommand();
-      } else {
-        out.write('');
-      }
-    } else {
-      out.write('${config.pathtoFfmpeg} ${config.getArgs().join(" ")}');
-      writeFile(out);
-    }
+enum RunnerStatus {
+  Initializing,
+  Running,
+  Delayed
+}
 
+class Source {
+  Directory get dir => _dir;
+  Directory _dir;
+  Stream<FileSystemEntity> get files => _dir.list(recursive: true);
+
+  Source(this._dir);
+}
+
+class FilteredSource extends Source {
+  Stream<FileSystemEntity> get files => dir.list(recursive: true).where(_filter);
+  Function _filter;
+
+  FilteredSource(Directory dir, bool filter(FileSystemEntity)) : super(dir) {
+    _filter = filter;
   }
-  await chainSyncRunCommand();
-
-  // wait period
-  print('all files processed ; waiting 30 seconds....');
-  new Future.delayed(new Duration(seconds: 30)).then((_) => runCheck(config));
 }
 
-String modifyExtension(String initialPath) {
-  return initialPath.replaceAll(new RegExp(r'.mkv$'), '.mp4');
+class Output {
+  Stream<String> get out => _in.map(_processFn);
+  Function _processFn;
+
+  Stream<FileSystemEntity> _in;
+
+  Output(this._in, String this._processFn(FileSystemEntity) );
+
+  Future process() async {
+    List<String> allOutput = await out.toList();
+    print('got all output: ${allOutput.length} items: ${allOutput}');
+    new File('${config.finishFolder}/.encodr')..createSync()..writeAsStringSync(allOutput.join("\n"), flush: true);
+  }
 }
 
-Stream<FileSystemEntity> getFiles(String folderToCheck) {
-  Directory folder = new Directory(folderToCheck);
-
-  Stream listStream = folder.list(recursive: true);
-  return listStream;
-}
-
-Stream<FileSystemEntity> getMkvFiles(Stream<FileSystemEntity> files) {
-  return files.where((FileSystemEntity file) {
-    //print('file: ${file.path}');
-    if (file.path.endsWith('.mkv')) {
-      print('MKV: ${file.path}');
-      return true;
+void main() {
+  new Runner(() async {
+    print('running');
+    Source src = new FilteredSource(
+        new Directory(config.folderToCheck),
+        (FileSystemEntity entity) {
+          //print('checking file ${entity.path}');
+          String filePath = getFileNameWithPath(config.finishFolder, entity, '.mp4');
+          bool dstExists = new File(filePath).existsSync();
+          //print('filePath: ${filePath}, exists: ${dstExists}');
+          return entity.statSync().type == FileSystemEntityType.FILE && entity.path.endsWith('.mkv') && !dstExists;
     }
-    return false;
-  });
+    );
+    print('creating output...');
+    Output output = new Output(src.files, (FileSystemEntity entity) {
+      return "${entity.path}:${getFileNameWithPath(config.finishFolder, entity, '.mp4')}";
+    });
+
+    print('running output.process()');
+    await output.process();
+
+  }, delay: new Duration(seconds:15));
 }
 
 getFileNameWithPath(String basePath, File fileWithName, String extension) {
