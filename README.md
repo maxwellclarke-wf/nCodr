@@ -1,6 +1,7 @@
 # nCodr
-Docker-based ffmpeg mkv -> mp4 transcoder for Synology DiskStation
-ffmpeg based on https://github.com/jrottenberg/ffmpeg
+* Docker-based ffmpeg mkv -> mp4 transcoder for Synology DiskStation
+* ffmpeg based on https://github.com/jrottenberg/ffmpeg
+* Dropbox image for Synology based on CentOS
 
 #### Build
 `make build`
@@ -11,7 +12,7 @@ Pull down the latest built machines from:
 
 #### Run
 
-** Synology **
+** Synology : ffmpeg & nCodr **
 You must supply two volumes on each machine, `/encodeIn` and `/encodeOut`.
 
 The easiest way to get started (and there's probably a better way): 
@@ -21,16 +22,16 @@ The easiest way to get started (and there's probably a better way):
 * Import exported container json
 
 #### Last you were doing...
-* Scripts lying about are in the process of being converted to Makefile.
+* You fixed the make file so it doesn't suck as much
+* Separation of concerns between dart watcher and ffmpeg
 * Create actual tests instead of a test method to run
 
-#### Improvements for the future
+#### Improvements/other recipes for the future
 * Dart:
+  * Drop-in Dart microservice for RAD with Redstone
   * Generalize Dart container rules
-  * Pass files instead of commands
   * Change communication from encode.sh to http request
 * Make process:
-  * include pushing to repos
+  * include pushing to repos for dropbox
   * Generate .json config and uploading it to Synology somehow
-
-
+  * Adding events to DSM notification center
