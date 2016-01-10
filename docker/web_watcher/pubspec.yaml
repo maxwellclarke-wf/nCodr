@@ -1,0 +1,21 @@
+name: web_watcher
+version: 0.0.1
+author: Max Clarke <maxwelljclarke@gmail.com>
+
+environment:
+  sdk: '>=1.0.0'
+
+dependencies:
+  browser: '>=0.10.0 <0.11.0'
+  redstone: "^0.6.2"
+
+dev_dependencies:
+  args: "0.13.0"
+  coverage: "^0.7.2"
+  dart_dev: "^1.0.0"
+  dart_style: ">=0.1.8 <0.3.0"
+  dartdoc: "^0.4.0"
+  mockito: "^0.11.0"
+  test: "0.12.6"
+
+
