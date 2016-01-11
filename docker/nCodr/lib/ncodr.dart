@@ -1,4 +1,7 @@
-library nCodr;
+library ncodr;
+
+import 'dart:async';
+import 'dart:io';
 
 class Config {
   String get inPath => _inPath;

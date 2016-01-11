@@ -3,11 +3,10 @@
  *
  * Gets all the mkvs for a folder and transcodes them.
  */
-library nCodr;
+library ncodr.bin.server;
 
 import 'dart:io';
-import 'dart:async';
-import 'package:nCodr/nCodr.dart';
+import 'package:ncodr/ncodr.dart';
 
 void main() {
   Config config = new Config(
