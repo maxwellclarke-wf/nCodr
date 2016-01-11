@@ -5,7 +5,7 @@ TEST_ENCODE_OUT = $(BASE_PATH)/output_files:/encodeOut
 
 ENCODER_VOLUMES = -v $(TEST_ENCODE_IN) -v $(TEST_ENCODE_OUT)
 
-DART_PATH = docker/dart_encode
+DART_PATH = docker/ncodr
 DART_TAG = emcee/$(DART_NAME)
 DART_NAME = encodr
 DART_RUN_ARGS = --volumes-from $(DART_NAME) $(ENCODER_VOLUMES)
