@@ -20,33 +20,24 @@ Config get outputConfig => _outputConfig;
 Config _outputConfig;
 
 @app.Route("/fetch")
-fetchList(/*@app.Inject() DirectoryStore store*/) {
-
-  /*if (store != null) {
-    print('yay, it exists!');
-    return '${store.lastUpdate} : ${store.nodes}';
-  }
-  else {
-    print('store gone, yo');
-  }
-  return 'no sirree';*/
-  // this returns all mkvs without a match in outputStore
+fetchList(@app.Inject() DirectoryStore store) {
+  // this returns all mkvs without a match in outputStore in a format for emcee/ffmpeg docker
   List<FileSystemEntity> returnList = _inputStore.nodes.where((entity) {
-    // matching nodes
     if (extension(entity.path) != '.mkv') {
       return false;
     }
-  String inName = basenameWithoutExtension(entity.path);
-  return !outputStore.nodes.any((outEntity) {
+    String inName = basenameWithoutExtension(entity.path);
+    return !outputStore.nodes.any((outEntity) {
       String outName = basenameWithoutExtension(outEntity.path);
-      return outName == inName &&['.mkv', '.mp4', '.m4v'].any((ext) =>
-              extension(outEntity.path) == ext);
-
+      return outName == inName &&['.mkv', '.mp4', '.m4v'].any(
+          (ext) => extension(outEntity.path) == ext
+      );
     });
   }).toList();
-
-  return returnList.map((entity) => "${entity.path}:${outputConfig.checkPath}/${basenameWithoutExtension(entity.path)}.mkv").toList();
+  return returnList.map((entity) => "${entity.path}:${outputConfig.checkPath}/${basenameWithoutExtension(entity.path)}.mp4").join('\n');
 }
+
+HttpServer _server;
 
 start(String inPath, String outPath) async {
   Duration refreshPeriod = new Duration(seconds: 15);
@@ -59,6 +50,13 @@ start(String inPath, String outPath) async {
   app.addModule(new Module()
     //..bind(DirectoryStore, toValue:store)
   );
-  app.setupConsoleLog();
-  app.start(address: 'localhost');
 }
+
+stop() async {
+  //await _server.close(force: true);
+  _inputConfig = null;
+  _outputConfig = null;
+  _inputStore = null;
+  _outputStore = null;
+}
+

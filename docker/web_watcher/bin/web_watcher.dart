@@ -9,7 +9,7 @@ import 'dart:io';
 
 main() {
   String testFilesPath = Directory.current.parent.parent.path + '/test/test_files';
-  print(Directory.current.path);
-  print(new Directory('${Directory.current.path}/../../..').path);
+  app.setupConsoleLog();
   services.start('${testFilesPath}/input_files', '${testFilesPath}/output_files');
+  app.start(address: 'localhost');
 }
